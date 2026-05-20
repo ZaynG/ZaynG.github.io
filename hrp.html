@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hierarchical Risk Parity · Zeen Guo</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<nav>
+  <span class="brand"><a href="index.html" style="color:inherit;text-decoration:none">Zeen Guo</a></span>
+  <a href="index.html">Home</a>
+  <a href="index.html#projects" class="active">Projects</a>
+</nav>
+
+<div class="page">
+
+  <div class="proj-header">
+    <a class="back" href="index.html#projects">← Projects</a>
+    <div class="kicker">Inspired by L&oacute;pez de Prado (2016) &nbsp;·&nbsp; S&amp;P 500 &amp; CSI 300 &nbsp;·&nbsp; 1996–2025</div>
+    <h1>Hierarchical Risk Parity Across U.S. and Chinese Equities</h1>
+    <div class="byline">
+      252,164 stock-month observations (S&amp;P 500) &nbsp;·&nbsp; Monthly rebalancing, 28-year backtest &nbsp;·&nbsp;
+      <a href="assets/hrp/paper.pdf" target="_blank">Full paper ↗</a>
+    </div>
+  </div>
+
+  <!-- PROBLEM SETUP -->
+  <div class="section">
+    <h2>Problem Setup</h2>
+    <p class="lead">
+      Traditional portfolio optimization — mean-variance, minimum variance, equal risk contribution (ERC) — relies on
+      inverting a covariance matrix. In high-dimensional equity universes (N &#8776; 500), the sample covariance matrix
+      is near-singular and highly unstable, producing extreme weight allocations and poor out-of-sample performance
+      even after shrinkage corrections.
+    </p>
+    <p>
+      Hierarchical Risk Parity (L&oacute;pez de Prado, 2016) takes a fundamentally different approach: instead of inverting
+      a covariance matrix, it uses hierarchical clustering to uncover the natural correlation structure among assets,
+      then allocates risk recursively across clusters. No matrix inversion is required.
+    </p>
+    <p>
+      This project replicates the HRP methodology on the S&amp;P 500 (1996–2024) and extends it to China&rsquo;s CSI 300
+      (2012–2025) — testing whether hierarchical risk allocation retains its advantages in a less mature,
+      higher-volatility emerging market. HRP is benchmarked against inverse volatility (IV) and
+      three ERC variants using sample covariance, Ledoit&ndash;Wolf shrinkage, and PCA-based estimation.
+    </p>
+    <a class="paper-link" href="assets/hrp/paper.pdf" target="_blank">&#128196; Full paper (PDF)</a>
+  </div>
+
+  <!-- DATASET -->
+  <div class="section">
+    <h2>Dataset</h2>
+    <div class="dataset-callout">
+      <div class="ds-item">
+        <div class="ds-val">252,164</div>
+        <div class="ds-lbl">stock-month obs. (S&amp;P 500, 1991&ndash;2024)</div>
+      </div>
+      <div class="ds-item">
+        <div class="ds-val">28 years</div>
+        <div class="ds-lbl">S&amp;P 500 backtest (1996&ndash;2024)</div>
+      </div>
+      <div class="ds-item">
+        <div class="ds-val">13 years</div>
+        <div class="ds-lbl">CSI 300 backtest (2012&ndash;2025)</div>
+      </div>
+      <div class="ds-item">
+        <div class="ds-val">5 strategies</div>
+        <div class="ds-lbl">IV, ERC &#215;3, HRP</div>
+      </div>
+    </div>
+    <p>
+      <strong>S&amp;P 500:</strong> Monthly total returns from CRSP (survivorship-bias-free), SPY ETF as benchmark.
+      Constituency file used at each monthly rebalance date to ensure only eligible index members are included.
+      Full sample spans 1991–2024 (252,164 stock-month observations); backtest begins 1996 after applying a
+      minimum 60-month lookback filter (&#8805;36 valid observations required).
+    </p>
+    <p>
+      <strong>CSI 300:</strong> Monthly returns from WIND database (2007–2025), CSI 300 constituency file.
+      Equal-weighted CSI 300 index used as benchmark. Missing data imputed with cross-sectional mean of each period.
+    </p>
+  </div>
+
+  <!-- METHODOLOGY -->
+  <div class="section">
+    <h2>Methodology</h2>
+    <p>HRP is implemented in three steps. All competing strategies share the same rebalancing schedule and eligibility filters.</p>
+
+    <div class="pipeline">
+      <div class="pipe-step">
+        <span class="pipe-num">01</span>
+        <div class="pipe-content">
+          <strong>Tree Clustering</strong>
+          <span>
+            Given pairwise return correlation &#961;<sub>ij</sub>, define the correlation distance
+            d<sub>ij</sub> = &#8730;(&#189;(1 &#8722; &#961;<sub>ij</sub>)).
+            To capture overall structural relationships, compare distance profiles:
+            &#432;<sub>ij</sub> = &#8730;(&#8721;<sub>n</sub>(d<sub>ni</sub> &#8722; d<sub>nj</sub>)&#178;).
+            Single-linkage hierarchical clustering builds a dendrogram grouping similar assets into a tree.
+          </span>
+        </div>
+      </div>
+      <div class="pipe-step">
+        <span class="pipe-num">02</span>
+        <div class="pipe-content">
+          <strong>Quasi-Diagonalization</strong>
+          <span>
+            Recursively expand tree branches to reorder assets into a permutation sortIx such that correlated
+            assets are placed adjacent. Permute the covariance matrix V* = V[sortIx, sortIx], producing a
+            block-diagonal structure. Highly correlated assets cluster into visible blocks along the diagonal.
+          </span>
+        </div>
+      </div>
+      <div class="pipe-step">
+        <span class="pipe-num">03</span>
+        <div class="pipe-content">
+          <strong>Recursive Bisection Allocation</strong>
+          <span>
+            Bisect the ordered asset list into two groups. For each subgroup, compute inverse-variance weights
+            w&#771; = diag(V)&#8315;&#185; / tr(diag(V)&#8315;&#185;) and cluster variance
+            V&#771; = w&#771;<sup>T</sup> V w&#771;.
+            Allocate the split factor &#945; = 1 &#8722; V&#771;<sup>(1)</sup> / (V&#771;<sup>(1)</sup> + V&#771;<sup>(2)</sup>)
+            to group 1 and (1 &#8722; &#945;) to group 2. Repeat recursively until each asset has a final weight.
+            No matrix inversion required at any step.
+          </span>
+        </div>
+      </div>
+      <div class="pipe-step">
+        <span class="pipe-num">04</span>
+        <div class="pipe-content">
+          <strong>Benchmark strategies</strong>
+          <span>
+            <em>Inverse Volatility:</em> w<sub>i</sub> &#8733; 1/&#963;<sub>i</sub> — requires only volatility estimates, no correlations.
+            <em>ERC:</em> equalise each asset&rsquo;s marginal risk contribution RC<sub>i</sub> = w<sub>i</sub>(&#931;w)<sub>i</sub> / &#8730;(w<sup>T</sup>&#931;w),
+            implemented with three covariance estimators: sample covariance, Ledoit&ndash;Wolf shrinkage, and PCA (K = 30 components).
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CORRELATION STRUCTURE -->
+  <div class="section">
+    <h2>Hierarchical Correlation Structure</h2>
+    <p>
+      The figures below illustrate how quasi-diagonalization transforms the correlation matrix into a tractable
+      block structure, and how this structure has evolved over time — particularly in the technology sector.
+    </p>
+    <div class="fig-grid cols-1">
+      <div class="fig-item">
+        <img src="assets/hrp/Dendrogram_2024-12-01.png" alt="Dendrogram December 2024" />
+        <div class="fig-caption">Figure 1 &mdash; Dendrogram of S&amp;P 500 constituents, December 2024. Assets within the same branch exhibit higher co-movement. Distant branches represent stocks with more independent return profiles.</div>
+      </div>
+    </div>
+    <div class="fig-grid cols-2">
+      <div class="fig-item">
+        <img src="assets/hrp/Original_2024-12-01.png" alt="Original correlation matrix December 2024" />
+        <div class="fig-caption">Figure 2 &mdash; Original correlation matrix (December 2024): no visible structure; correlations scattered uniformly.</div>
+      </div>
+      <div class="fig-item">
+        <img src="assets/hrp/QuasiDiag_2024-12-01.png" alt="Quasi-diagonalized correlation matrix December 2024" />
+        <div class="fig-caption">Figure 3 &mdash; After quasi-diagonalization: clear block-diagonal structure emerges, grouping correlated assets along the diagonal.</div>
+      </div>
+      <div class="fig-item">
+        <img src="assets/hrp/QuasiDiag_2010-12-01(tech).png" alt="Tech sector clustering 2010" />
+        <div class="fig-caption">Figure 4 &mdash; Technology sector correlation structure, December 2010: within-sector correlations are relatively diffuse.</div>
+      </div>
+      <div class="fig-item">
+        <img src="assets/hrp/QuasiDiag_2024-12-01(tech).png" alt="Tech sector clustering 2024" />
+        <div class="fig-caption">Figure 5 &mdash; Technology sector, December 2024: substantially tighter clustering, driven by AI-theme concentration. A potential warning sign of elevated systemic risk in the sector.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESULTS: S&P 500 -->
+  <div class="section">
+    <h2>Results &mdash; S&amp;P 500 (1996&ndash;2024)</h2>
+    <p>
+      All five risk allocation strategies outperform the SPY benchmark on a risk-adjusted basis.
+      HRP delivers the most compelling risk profile: the highest Sharpe ratio (0.87) and shallowest
+      maximum drawdown (&minus;43.7%), despite a lower raw return than IV and ERC.
+      Inverse Volatility offers the highest return (12.5%) with minimal turnover (1.1%),
+      making it a strong practical alternative.
+    </p>
+    <p>
+      Notably, the three ERC variants using different covariance estimators (sample, Ledoit&ndash;Wolf, PCA)
+      produce near-identical results (Sharpe 0.83–0.84). This suggests that the equal risk contribution
+      principle itself drives the improvement, not the specific estimation technique.
+    </p>
+
+    <div class="tbl-caption">Table 1 &mdash; Risk allocation strategies vs. SPY benchmark, January 1996&ndash;December 2024</div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="text-align:left">Strategy</th>
+            <th>Ann. Return</th><th>Ann. Vol.</th>
+            <th>Sharpe</th><th>Sortino</th>
+            <th>Max DD</th><th>Turnover</th><th>Eff. Bets</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Inverse Volatility</td><td>12.5%</td><td>15.3%</td><td>0.82</td><td>1.11</td><td>&minus;48.7%</td><td>1.1%</td><td>360</td></tr>
+          <tr><td>ERC + Sample Cov.</td><td>12.3%</td><td>14.6%</td><td>0.84</td><td>1.13</td><td>&minus;47.9%</td><td>11.2%</td><td>278</td></tr>
+          <tr><td>ERC + Ledoit&ndash;Wolf</td><td>12.4%</td><td>14.7%</td><td>0.84</td><td>1.13</td><td>&minus;48.7%</td><td>10.3%</td><td>284</td></tr>
+          <tr><td>ERC + PCA</td><td>12.2%</td><td>14.6%</td><td>0.83</td><td>1.13</td><td>&minus;48.0%</td><td>10.3%</td><td>279</td></tr>
+          <tr><td><strong>HRP</strong></td><td>11.8%</td><td class="best">13.5%</td><td class="best">0.87</td><td class="best">1.17</td><td class="best">&minus;43.7%</td><td>13.5%</td><td>222</td></tr>
+          <tr class="sep bench"><td>SPY (Benchmark)</td><td>10.9%</td><td>15.3%</td><td>0.71</td><td>0.99</td><td>&minus;50.8%</td><td>—</td><td>—</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="fig-grid cols-1" style="margin-top:24px">
+      <div class="fig-item">
+        <img src="assets/hrp/Risk Parity Portfolio Comparison vs SPY Benchmark (1996-2024).png" alt="Cumulative performance vs SPY" />
+        <div class="fig-caption">Figure 6 &mdash; Cumulative wealth: all risk parity strategies vs. SPY (1996&ndash;2024). All strategies dominate the benchmark, with particularly pronounced outperformance during the 2008&ndash;2009 financial crisis and the 2020 COVID-19 crash.</div>
+      </div>
+      <div class="fig-item">
+        <img src="assets/hrp/Portfolio Drawdown.png" alt="Portfolio drawdown" />
+        <div class="fig-caption">Figure 7 &mdash; Drawdown paths (1996&ndash;2024). HRP max drawdown &minus;43.7% vs. SPY &minus;50.8% at the 2008 trough. HRP maintains shallower drawdowns across all major stress episodes.</div>
+      </div>
+      <div class="fig-item">
+        <img src="assets/hrp/Portfolio Concentration Over Time (Top 10 Holdings).png" alt="Portfolio concentration S&P 500" />
+        <div class="fig-caption">Figure 8 &mdash; Top-10 holding concentration over time, S&amp;P 500 universe. HRP dynamically adjusts concentration across market regimes.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESULTS: CSI 300 -->
+  <div class="section">
+    <h2>Results &mdash; CSI 300 (2012&ndash;2025)</h2>
+    <p>
+      In the Chinese market, HRP dominates across all dimensions simultaneously &mdash; a result uncommon for pure
+      risk strategies. It achieves the highest annualised return (10.4%), the lowest volatility (19.5%),
+      the best risk-adjusted ratios (Sharpe 0.53, Sortino 0.82), and the shallowest drawdown (&minus;37.3%).
+    </p>
+    <p>
+      This raw return outperformance likely reflects China&rsquo;s structural inefficiencies: HRP&rsquo;s ability
+      to identify mispriced correlation structures and avoid crowded trades provides alpha generation opportunities
+      beyond mere risk management. The performance gap widens during the 2015 equity bubble burst
+      and the 2018 trade war selloff.
+    </p>
+
+    <div class="tbl-caption">Table 2 &mdash; Risk allocation strategies vs. equal-weighted CSI 300 benchmark, May 2012&ndash;October 2025</div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="text-align:left">Strategy</th>
+            <th>Ann. Return</th><th>Ann. Vol.</th>
+            <th>Sharpe</th><th>Sortino</th>
+            <th>Max DD</th><th>Turnover</th><th>Eff. Bets</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Inverse Volatility</td><td>9.5%</td><td>20.9%</td><td>0.46</td><td>0.73</td><td>&minus;38.9%</td><td>1.9%</td><td>247</td></tr>
+          <tr><td>ERC + Sample Cov.</td><td>9.5%</td><td>20.9%</td><td>0.45</td><td>0.73</td><td>&minus;38.4%</td><td>7.9%</td><td>214</td></tr>
+          <tr><td>ERC + Ledoit&ndash;Wolf</td><td>9.3%</td><td>20.8%</td><td>0.45</td><td>0.72</td><td>&minus;39.1%</td><td>6.7%</td><td>225</td></tr>
+          <tr><td>ERC + PCA</td><td>8.8%</td><td>20.5%</td><td>0.43</td><td>0.67</td><td>&minus;38.3%</td><td>8.7%</td><td>211</td></tr>
+          <tr><td><strong>HRP</strong></td><td class="best">10.4%</td><td class="best">19.5%</td><td class="best">0.53</td><td class="best">0.82</td><td class="best">&minus;37.3%</td><td>12.9%</td><td>155</td></tr>
+          <tr class="sep bench"><td>EW CSI 300 (Benchmark)</td><td>7.8%</td><td>22.3%</td><td>0.35</td><td>0.56</td><td>&minus;45.8%</td><td>—</td><td>—</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="fig-grid cols-1" style="margin-top:24px">
+      <div class="fig-item">
+        <img src="assets/hrp/Risk Parity Portfolio Comparison vs HS300.png" alt="Cumulative performance vs CSI 300" />
+        <div class="fig-caption">Figure 9 &mdash; Cumulative wealth vs. equal-weighted CSI 300 (2012&ndash;2025). Performance gap widens notably during the 2015 equity bubble burst and the 2018 U.S.&ndash;China trade war selloff.</div>
+      </div>
+      <div class="fig-item">
+        <img src="assets/hrp/HS 300 Portfolio Concentration Over Time (Top 10 Holdings).png" alt="Portfolio concentration CSI 300" />
+        <div class="fig-caption">Figure 10 &mdash; Top-10 holding concentration over time, CSI 300 universe.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KEY FINDINGS -->
+  <div class="section">
+    <h2>Key Findings</h2>
+    <div class="insights">
+      <ul>
+        <li>
+          <strong>HRP achieves the best risk-adjusted performance in both markets.</strong>
+          Highest Sharpe and Sortino ratios across all strategies: 0.87/1.17 in the S&amp;P 500 and 0.53/0.82 in the CSI 300.
+          In China, HRP uniquely dominates in raw returns as well (10.4% vs. 7.8% benchmark),
+          which is unusual for a pure risk-based allocation strategy.
+        </li>
+        <li>
+          <strong>The concentration paradox.</strong>
+          HRP achieves better effective diversification with fewer positions: 222 effective bets (S&amp;P 500) vs. 360 for
+          Inverse Volatility. This illustrates that effective diversification requires selecting truly independent
+          risk sources, not merely maximising asset count. Ten highly correlated tech stocks contribute less
+          diversification than one representative per distinct sector cluster.
+        </li>
+        <li>
+          <strong>Covariance estimation method has minimal impact on ERC performance.</strong>
+          Sample covariance, Ledoit&ndash;Wolf shrinkage, and PCA ERC variants produce near-identical Sharpe ratios (0.83&ndash;0.84).
+          The equal risk contribution principle itself drives the improvement over naive benchmarks,
+          not the choice of estimator.
+        </li>
+        <li>
+          <strong>HRP provides superior downside protection during stress regimes.</strong>
+          Max drawdown &minus;43.7% vs. SPY &minus;50.8% during the 2008 financial crisis.
+          When correlations spike across the market, HRP&rsquo;s hierarchical structure prevents over-allocation
+          to synchronized clusters that correlation-blind methods fail to distinguish.
+        </li>
+        <li>
+          <strong>Tech sector clustering has tightened markedly since 2010.</strong>
+          The quasi-diagonalized correlation matrix for technology stocks in December 2024 shows substantially
+          tighter within-cluster correlations compared to 2010 — consistent with AI-theme concentration
+          compressing individual stock fundamentals into a single sector-wide factor.
+        </li>
+      </ul>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Can Machines Learn to Trade Momentum? · Zeen Guo</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<nav>
+  <span class="brand"><a href="index.html" style="color:inherit;text-decoration:none">Zeen Guo</a></span>
+  <a href="index.html">Home</a>
+  <a href="index.html#projects" class="active">Projects</a>
+</nav>
+
+<div class="page">
+
+  <div class="proj-header">
+    <a class="back" href="index.html#projects">← Projects</a>
+    <div class="kicker">Inspired by Gu, Kelly &amp; Xiu (2020) &nbsp;·&nbsp; Chinese A-shares &nbsp;·&nbsp; 2002–2025</div>
+    <h1>Can Machines Learn to Trade Momentum?</h1>
+    <div class="byline">
+      16.7 million raw daily observations &nbsp;·&nbsp; 727,997 stock-month observations after cleaning &nbsp;·&nbsp;
+      Out-of-sample evaluation: 2020–2025 &nbsp;·&nbsp;
+      <a href="assets/momentum/paper.pdf" target="_blank">Full paper ↗</a>
+    </div>
+  </div>
+
+  <!-- PROBLEM SETUP -->
+  <div class="section">
+    <h2>Problem Setup</h2>
+    <p class="lead">
+      The classical 12-1 momentum strategy — buying past 12-month winners and shorting past losers — is one of the
+      most robust return anomalies in U.S. equity markets. China's A-share market is structurally different:
+      a predominantly retail investor base, frequent policy-driven reversals, daily price limits, and a
+      documented absence of conventional momentum effects.
+    </p>
+    <p>
+      This project extends Gu, Kelly &amp; Xiu (2020) to Chinese A-shares, asking whether machine learning models
+      can extract cross-sectional return predictability from a richer set of price and volume features —
+      features that rule-based momentum strategies systematically ignore.
+    </p>
+    <p>
+      The prediction task is binary classification. Each month, models rank all eligible stocks by their predicted
+      probability of beating the cross-sectional median return in the following month. Stocks are sorted into quintile
+      portfolios Q1 (lowest signal) through Q5 (highest signal), held for one month. The Q5–Q1 long-short spread
+      is evaluated out-of-sample over the 2020–2025 test period. Eight models are compared, from the naive
+      12-1 momentum rule to gradient-boosted trees.
+    </p>
+    <a class="paper-link" href="assets/momentum/paper.pdf" target="_blank">&#128196; Full paper (PDF)</a>
+  </div>
+
+  <!-- DATASET -->
+  <div class="section">
+    <h2>Dataset</h2>
+    <p>
+      Data are sourced from the China Stock Market &amp; Accounting Research (CSMAR) database, covering all Chinese
+      A-shares from January 2001 to December 2025. The raw data comprise <strong>16,748,839 daily stock observations</strong>,
+      which are cleaned, filtered, and aggregated into monthly panel observations used for model training and evaluation.
+      B-shares, BSE stocks, and SSE B-shares are excluded. A 180-day post-IPO filter is applied to avoid thin-trading bias.
+    </p>
+    <div class="dataset-callout">
+      <div class="ds-item">
+        <div class="ds-val">16.7M</div>
+        <div class="ds-lbl">raw daily observations, 2001–2025</div>
+      </div>
+      <div class="ds-item">
+        <div class="ds-val">727,997</div>
+        <div class="ds-lbl">stock-month observations after cleaning</div>
+      </div>
+      <div class="ds-item">
+        <div class="ds-val">5,432</div>
+        <div class="ds-lbl">unique stocks</div>
+      </div>
+      <div class="ds-item">
+        <div class="ds-val">74</div>
+        <div class="ds-lbl">cross-sectional features</div>
+      </div>
+    </div>
+    <p>
+      Five CSMAR datasets are used: daily returns (Dretwd), adjusted closing prices (Adjprcwd),
+      circulating market capitalisation (Dsmvosd), daily turnover (ToverOs), and monthly returns and turnover averages.
+      The sample is split chronologically: Train: 2002–2015 (260,825 observations) &nbsp;·&nbsp;
+      Validation: 2016–2019 (140,929 observations) &nbsp;·&nbsp; Out-of-sample test: 2020–2025 (326,243 observations).
+    </p>
+  </div>
+
+  <!-- FEATURE PIPELINE -->
+  <div class="section">
+    <h2>Feature Pipeline</h2>
+    <p>
+      74 cross-sectional features are constructed from price and volume data only — no accounting data, no analyst
+      estimates. All features are computed from data available as of end of month <em>t</em>&#8722;1,
+      cross-sectionally z-scored within each month, and winsorised at the 1st and 99th percentiles.
+    </p>
+    <p>
+      Although portfolios are rebalanced monthly, daily data are used to construct features. This is intentional:
+      daily returns and turnover over the past 1–20 trading days capture intra-month price dynamics and trading
+      activity that monthly aggregates obscure. Feature importance results confirm this — daily features
+      alone account for over 52% of LightGBM gain, and the most informative individual features are
+      daily-frequency variables. Monthly rebalancing keeps transaction costs manageable while daily features
+      provide the informational edge.
+    </p>
+    <div class="pipeline">
+      <div class="pipe-step">
+        <span class="pipe-num">01</span>
+        <div class="pipe-content">
+          <strong>Monthly returns</strong>
+          <span>Cumulative returns over 2–13 months (12 features). Captures medium-horizon momentum and reversal.</span>
+        </div>
+      </div>
+      <div class="pipe-step">
+        <span class="pipe-num">02</span>
+        <div class="pipe-content">
+          <strong>Daily returns</strong>
+          <span>Cumulative returns over the past 1–20 trading days (20 features). LightGBM assigns 27.6% of total feature importance gain to this group — the single largest contributor.</span>
+        </div>
+      </div>
+      <div class="pipe-step">
+        <span class="pipe-num">03</span>
+        <div class="pipe-content">
+          <strong>Monthly &amp; daily turnover</strong>
+          <span>Average turnover over 2–13 months (12 features) and cumulative daily turnover over 1–20 days (20 features). Together account for 38% of LightGBM gain, reflecting trading activity as a key signal in China's retail-driven market.</span>
+        </div>
+      </div>
+      <div class="pipe-step">
+        <span class="pipe-num">04</span>
+        <div class="pipe-content">
+          <strong>Moving average ratios &amp; slopes</strong>
+          <span>Price relative to moving average and moving average trend over windows {5, 20, 60, 120, 250} trading days (10 features). MA ratio = price / MA(<em>w</em>) &#8722; 1; MA slope = MA(<em>w</em>, <em>t</em>) / MA(<em>w</em>, <em>t</em>&#8722;20) &#8722; 1.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="tbl-caption">Table 1 &mdash; Feature groups and LightGBM feature importance (gain)</div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="text-align:left">Feature Group</th>
+            <th style="text-align:left">Features</th>
+            <th>Count</th>
+            <th>LGB Gain</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Daily Returns</td><td style="text-align:left; font-family:var(--sans)">dret_cum1 &hellip; dret_cum20</td><td>20</td><td>27.6%</td></tr>
+          <tr><td>Daily Turnover</td><td style="text-align:left; font-family:var(--sans)">dto_cum1 &hellip; dto_cum20</td><td>20</td><td>25.1%</td></tr>
+          <tr><td>Monthly Returns</td><td style="text-align:left; font-family:var(--sans)">mret_cum2 &hellip; mret_cum13</td><td>12</td><td>18.1%</td></tr>
+          <tr><td>Monthly Turnover</td><td style="text-align:left; font-family:var(--sans)">mto_cum2 &hellip; mto_cum13</td><td>12</td><td>12.9%</td></tr>
+          <tr><td>MA Ratios</td><td style="text-align:left; font-family:var(--sans)">ma_ratio_5/20/60/120/250</td><td>5</td><td>9.6%</td></tr>
+          <tr><td>MA Slopes</td><td style="text-align:left; font-family:var(--sans)">ma_slope_5/20/60/120/250</td><td>5</td><td>6.8%</td></tr>
+          <tr class="sep"><td><strong>Total</strong></td><td></td><td><strong>74</strong></td><td><strong>100%</strong></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- MODELS -->
+  <div class="section">
+    <h2>Models</h2>
+    <p>
+      Eight models are compared, all trained on the same 74 features with identical data splits.
+      The basic momentum model serves as the rule-based baseline — it requires no training, relying solely on
+      the 12-month cumulative return signal. The remaining seven are statistical and machine learning models,
+      ranging from penalised linear classifiers to gradient-boosted trees.
+      All reported metrics are strictly out-of-sample (test period 2020–2025).
+    </p>
+    <div class="pipeline">
+      <div class="pipe-step">
+        <span class="pipe-num">—</span>
+        <div class="pipe-content">
+          <strong>Basic Momentum (baseline)</strong>
+          <span>Rule-based 12-1 momentum signal passed through a sigmoid. No training. Included to establish whether the raw price momentum anomaly exists in Chinese A-shares.</span>
+        </div>
+      </div>
+      <div class="pipe-step">
+        <span class="pipe-num">—</span>
+        <div class="pipe-content">
+          <strong>Logistic Regression, LASSO, Ridge, LDA</strong>
+          <span>Linear classifiers with L1/L2 regularisation, trained with StandardScaler. Serve as interpretable benchmarks to assess whether the predictive signal is approximately linear in the feature space.</span>
+        </div>
+      </div>
+      <div class="pipe-step">
+        <span class="pipe-num">—</span>
+        <div class="pipe-content">
+          <strong>Random Forest</strong>
+          <span>200 trees, max depth 8, minimum samples per leaf 50, square-root feature subset per split.</span>
+        </div>
+      </div>
+      <div class="pipe-step">
+        <span class="pipe-num">—</span>
+        <div class="pipe-content">
+          <strong>XGBoost</strong>
+          <span>Max depth 6, learning rate 0.05, subsample 0.8. Early stopping on validation accuracy; best iteration 63.</span>
+        </div>
+      </div>
+      <div class="pipe-step">
+        <span class="pipe-num">—</span>
+        <div class="pipe-content">
+          <strong>LightGBM</strong>
+          <span>63 leaves, learning rate 0.05, feature fraction 0.8. Early stopping on validation accuracy; best iteration 33. Also used for feature importance analysis.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="section">
+    <h2>Results</h2>
+    <p>
+      All results are evaluated on the out-of-sample test period (2020–2025). Benchmarks are the equal-weighted
+      and value-weighted market indices across all eligible A-shares.
+    </p>
+
+    <div class="tbl-caption">Table 2 &mdash; Annualised quintile returns and long-short Sharpe ratio, out-of-sample test period 2020–2025</div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="text-align:left">Model</th>
+            <th>Q1</th><th>Q2</th><th>Q3</th><th>Q4</th><th>Q5</th>
+            <th>Q5&minus;Q1</th><th>L/S Sharpe</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="bench"><td>EW Market</td><td>+14.71%</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>0.66</td></tr>
+          <tr class="bench"><td>VW Market</td><td>+16.90%</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>0.99</td></tr>
+          <tr class="sep"><td>Basic Momentum</td><td>+13.25%</td><td>+16.36%</td><td>+16.44%</td><td>+15.80%</td><td>+11.76%</td><td>&minus;1.33%</td><td>&minus;0.10</td></tr>
+          <tr><td>Logistic Regression</td><td>+3.04%</td><td>+12.67%</td><td>+15.70%</td><td>+19.38%</td><td>+23.75%</td><td>+20.16%</td><td>1.69</td></tr>
+          <tr><td>LASSO</td><td>+2.67%</td><td>+12.74%</td><td>+15.62%</td><td>+19.39%</td><td>+24.19%</td><td>+21.01%</td><td>1.75</td></tr>
+          <tr><td>Ridge</td><td>+3.04%</td><td>+12.67%</td><td>+15.70%</td><td>+19.38%</td><td>+23.75%</td><td>+20.16%</td><td>1.69</td></tr>
+          <tr><td>LDA</td><td>+3.01%</td><td>+12.59%</td><td>+16.04%</td><td>+19.44%</td><td>+23.45%</td><td>+19.90%</td><td>1.67</td></tr>
+          <tr><td>Random Forest</td><td>+1.89%</td><td>+10.93%</td><td>+16.31%</td><td>+20.64%</td><td>+25.08%</td><td>+22.79%</td><td>1.76</td></tr>
+          <tr><td>XGBoost</td><td>+2.38%</td><td>+10.92%</td><td>+15.70%</td><td>+20.26%</td><td class="best">+25.56%</td><td>+22.69%</td><td class="best">2.04</td></tr>
+          <tr><td>LightGBM</td><td>+2.61%</td><td>+9.81%</td><td>+16.71%</td><td>+20.59%</td><td>+25.11%</td><td>+21.98%</td><td>1.85</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="tbl-caption">Table 3 &mdash; Q5 long-only and Q5&minus;Q1 long-short performance summary, out-of-sample test period 2020–2025</div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="text-align:left">Model</th>
+            <th>Q5 Return</th><th>Q5 Sharpe</th><th>Q5 Max DD</th>
+            <th>L/S Return</th><th>L/S Sharpe</th><th>L/S Max DD</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="bench"><td>EW Market</td><td>+14.71%</td><td>0.66</td><td>&minus;26.41%</td><td>—</td><td>—</td><td>—</td></tr>
+          <tr class="bench"><td>VW Market</td><td>+16.90%</td><td>0.99</td><td>&minus;13.63%</td><td>—</td><td>—</td><td>—</td></tr>
+          <tr class="sep"><td>Basic Momentum</td><td>+11.76%</td><td>0.49</td><td>&minus;37.32%</td><td>&minus;1.33%</td><td>&minus;0.10</td><td>&minus;34.87%</td></tr>
+          <tr><td>Logistic Regression</td><td>+23.75%</td><td>1.06</td><td>&minus;21.28%</td><td>+20.16%</td><td>1.69</td><td>&minus;8.17%</td></tr>
+          <tr><td>LASSO</td><td>+24.19%</td><td>1.08</td><td>&minus;21.40%</td><td>+21.01%</td><td>1.75</td><td>&minus;8.15%</td></tr>
+          <tr><td>Ridge</td><td>+23.75%</td><td>1.06</td><td>&minus;21.28%</td><td>+20.16%</td><td>1.69</td><td>&minus;8.17%</td></tr>
+          <tr><td>LDA</td><td>+23.45%</td><td>1.04</td><td>&minus;21.43%</td><td>+19.90%</td><td>1.67</td><td>&minus;8.29%</td></tr>
+          <tr><td>Random Forest</td><td>+25.08%</td><td>1.17</td><td>&minus;16.62%</td><td>+22.79%</td><td>1.76</td><td>&minus;7.22%</td></tr>
+          <tr><td>XGBoost</td><td class="best">+25.56%</td><td>1.15</td><td>&minus;18.50%</td><td>+22.69%</td><td class="best">2.04</td><td class="best">&minus;5.10%</td></tr>
+          <tr><td>LightGBM</td><td>+25.11%</td><td>1.14</td><td>&minus;17.90%</td><td>+21.98%</td><td>1.85</td><td>&minus;5.48%</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="fig-grid cols-2" style="margin-top:32px">
+      <div class="fig-item">
+        <img src="assets/momentum/fig1_cumulative_wealth_q5.png" alt="Q5 cumulative wealth" />
+        <div class="fig-caption">Figure 1 &mdash; Q5 long-only cumulative wealth by model, out-of-sample test period 2020–2025.</div>
+      </div>
+      <div class="fig-item">
+        <img src="assets/momentum/fig2_cumulative_wealth_ls.png" alt="Long-short cumulative wealth" />
+        <div class="fig-caption">Figure 2 &mdash; Q5&minus;Q1 long-short cumulative wealth, out-of-sample test period 2020–2025.</div>
+      </div>
+      <div class="fig-item">
+        <img src="assets/momentum/fig3_quintile_bar_chart.png" alt="Quintile bar chart" />
+        <div class="fig-caption">Figure 3 &mdash; Annualised quintile returns by model. A monotone spread from Q1 to Q5 is observed across all models except basic momentum.</div>
+      </div>
+      <div class="fig-item">
+        <img src="assets/momentum/fig4_sharpe_comparison.png" alt="Sharpe comparison" />
+        <div class="fig-caption">Figure 4 &mdash; Long-short Sharpe ratio comparison across all models.</div>
+      </div>
+    </div>
+    <div class="fig-grid cols-1">
+      <div class="fig-item">
+        <img src="assets/momentum/fig5_full_timeline.png" alt="Full timeline 2002-2025" />
+        <div class="fig-caption">Figure 5 &mdash; XGBoost Q5 portfolio versus equal-weighted market benchmark, full sample 2002–2025 (training and out-of-sample test periods combined).</div>
+      </div>
+      <div class="fig-item">
+        <img src="assets/momentum/fig6_feature_importance.png" alt="Feature importance" />
+        <div class="fig-caption">Figure 6 &mdash; LightGBM feature importance (gain). Short-term price and volume dynamics account for the majority of predictive signal.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KEY FINDINGS -->
+  <div class="section">
+    <h2>Key Findings</h2>
+    <div class="insights">
+      <ul>
+        <li>
+          <strong>Momentum reversal confirmed in Chinese A-shares.</strong>
+          The rule-based 12-1 momentum signal produces a negative Q5&minus;Q1 spread (&minus;1.33%), with Q5 return (+11.76%)
+          below both the equal-weighted (+14.71%) and value-weighted (+16.90%) market benchmarks.
+          This is consistent with the well-documented absence of conventional momentum in Chinese A-shares.
+        </li>
+        <li>
+          <strong>Machine learning recovers strong predictive signal.</strong>
+          All models from logistic regression to gradient-boosted trees produce a clear monotone quintile spread
+          and positive long-short Sharpe ratios (1.67–2.04), in stark contrast to the momentum baseline (&minus;0.10).
+          XGBoost delivers the best risk-adjusted result: long-short Sharpe 2.04, maximum drawdown &minus;5.10%.
+          Over the full 2002–2025 backtest, the XGBoost Q5 portfolio returns +41.4% annualised (Sharpe 1.14)
+          versus +17.1% (Sharpe 0.53) for the equal-weighted market.
+        </li>
+        <li>
+          <strong>Linear models are surprisingly competitive.</strong>
+          LASSO achieves a long-short Sharpe of 1.75, nearly matching Random Forest (1.76). The predictive signal in
+          Chinese A-shares is largely linear after proper feature engineering and cross-sectional normalisation.
+          Non-linear models add value primarily at distributional extremes: tree-based models exhibit
+          materially lower maximum drawdowns (&minus;5.1% to &minus;7.2%) relative to linear models (&minus;8.2% to &minus;8.3%).
+        </li>
+        <li>
+          <strong>Short-term price-volume dynamics dominate predictability.</strong>
+          Daily returns (27.6%) and daily turnover (25.1%) jointly account for over half of total LightGBM gain.
+          The most informative individual features are 20-day cumulative daily turnover (7.6%)
+          and the most recent daily return (7.3%), reflecting the short-horizon nature of A-share return predictability.
+        </li>
+      </ul>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

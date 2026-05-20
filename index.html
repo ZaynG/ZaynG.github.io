@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Zeen Guo</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<nav>
+  <span class="brand">Zeen Guo</span>
+  <a href="index.html" class="active">Home</a>
+  <a href="index.html#projects">Projects</a>
+</nav>
+
+<div class="page">
+  <div class="hero">
+    <h1>Zeen Guo</h1>
+    <div class="sub">
+      MS Analytics, Georgia Institute of Technology &nbsp;·&nbsp;
+      MS Finance &amp; Economics, London School of Economics &nbsp;·&nbsp;
+      CFA Charterholder
+    </div>
+    <p>
+      I apply advanced analytics — machine learning, deep learning, LLM and NLP — to empirical finance and capital markets research.
+      My work focuses on Chinese equity markets, asking whether pricing anomalies and return-predictability results
+      established in the U.S. literature hold in a structurally different, less efficient setting.
+      Prior to research, I spent three years in public equity investing and trading in the hedge fund and investment banking industry.
+    </p>
+    <div class="hero-links">
+      <a href="mailto:zguo356@gatech.edu">zguo356@gatech.edu</a>
+    </div>
+  </div>
+
+  <div id="projects">
+    <div class="section-label">Research Projects</div>
+    <div class="projects-grid">
+
+      <a class="card" href="momentum.html">
+        <div>
+          <div class="card-meta">Inspired by Gu, Kelly &amp; Xiu (2020) &nbsp;·&nbsp; Chinese A-shares &nbsp;·&nbsp; 2002–2025</div>
+          <div class="card-title">Can Machines Learn to Trade Momentum?</div>
+          <div class="card-desc">
+            The classical 12-1 momentum rule fails in Chinese A-shares. This project tests whether machine learning models
+            can recover cross-sectional return predictability from price and volume data across 5,432 stocks.
+            XGBoost achieves a long-short Sharpe ratio of 2.04 — where naive momentum produces −0.10.
+          </div>
+          <div class="card-tags">
+            <span class="tag">Momentum</span>
+            <span class="tag">Financial Machine Learning</span>
+          </div>
+        </div>
+        <div class="card-arrow">→</div>
+      </a>
+
+      <a class="card" href="cnn.html">
+        <div>
+          <div class="card-meta">Inspired by Jiang, Kelly &amp; Xiu (2023) &nbsp;·&nbsp; Chinese A-shares &nbsp;·&nbsp; 2005–2024</div>
+          <div class="card-title">Can CNNs Read Price Charts in the Chinese Equity Market?</div>
+          <div class="card-desc">
+            Extends the image-based CNN return prediction framework to Chinese equities, a market with daily price limits,
+            a retail-dominated investor base, and weaker information efficiency.
+            A 1D CNN achieves a gross long-short Sharpe ratio of 5.41 at weekly frequency across 1.2 million stock-weeks.
+          </div>
+          <div class="card-tags">
+            <span class="tag">Trend Following</span>
+            <span class="tag">CNN</span>
+            <span class="tag">Pattern Recognition</span>
+          </div>
+        </div>
+        <div class="card-arrow">→</div>
+      </a>
+
+      <a class="card" href="hrp.html">
+        <div>
+          <div class="card-meta">Inspired by López de Prado (2016) &nbsp;·&nbsp; S&amp;P 500 &amp; CSI 300 &nbsp;·&nbsp; 1996–2025</div>
+          <div class="card-title">Hierarchical Risk Parity Across U.S. and Chinese Equities</div>
+          <div class="card-desc">
+            Evaluates whether hierarchical clustering-based portfolio construction outperforms covariance-inversion methods
+            in both U.S. and Chinese equity markets. HRP achieves the highest Sharpe ratio (0.87) and shallowest
+            maximum drawdown (−43.7%) on the S&amp;P 500 backtest spanning 28 years.
+          </div>
+          <div class="card-tags">
+            <span class="tag">Hierarchical Clustering</span>
+            <span class="tag">Portfolio Optimization</span>
+            <span class="tag">Risk Parity</span>
+          </div>
+        </div>
+        <div class="card-arrow">→</div>
+      </a>
+
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

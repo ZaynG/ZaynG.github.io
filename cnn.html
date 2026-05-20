@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Can CNNs Read Price Charts in the Chinese Equity Market? · Zeen Guo</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<nav>
+  <span class="brand"><a href="index.html" style="color:inherit;text-decoration:none">Zeen Guo</a></span>
+  <a href="index.html">Home</a>
+  <a href="index.html#projects" class="active">Projects</a>
+</nav>
+
+<div class="page">
+
+  <div class="proj-header">
+    <a class="back" href="index.html#projects">← Projects</a>
+    <div class="kicker">Inspired by Jiang, Kelly &amp; Xiu (2023) &nbsp;·&nbsp; Chinese A-shares &nbsp;·&nbsp; 2005–2024</div>
+    <h1>Can CNNs Read Price Charts in the Chinese Equity Market?</h1>
+    <div class="byline">
+      9.6 million stock-date observations, full sample 2005–2024 &nbsp;·&nbsp; GPU-trained rolling windows &nbsp;·&nbsp;
+      Out-of-sample portfolio evaluation: 2013–2024 &nbsp;·&nbsp;
+      <a href="assets/cnn/paper.pdf" target="_blank">Full paper ↗</a>
+    </div>
+  </div>
+
+  <!-- PROBLEM SETUP -->
+  <div class="section">
+    <h2>Problem Setup</h2>
+    <p class="lead">
+      Jiang, Kelly &amp; Xiu (2023) demonstrate that convolutional neural networks (CNNs) trained on stock price
+      chart images generate powerful out-of-sample return predictions in U.S. equities, substantially outperforming
+      classical momentum and short-term reversal signals. Their key insight is that CNNs learn visual price patterns
+      from OHLC charts that linear models cannot easily capture.
+    </p>
+    <p>
+      This project extends the same framework to China's A-share market, where conditions for chart-pattern
+      profitability may be even more favourable. Chinese markets feature a predominantly retail investor base
+      prone to technical trading, daily price limits (&#177;10%) that create predictable return clustering, and
+      structural information inefficiencies that U.S. markets largely lack.
+      Whether image-based predictability extends to a less informationally efficient market is an open empirical question.
+    </p>
+    <p>
+      The prediction task is binary classification. Given a stock's price chart image over the past
+      <em>I</em> days (<em>I</em> &#8712; {5, 20, 60}), models predict whether the subsequent <em>R</em>-day return
+      (<em>R</em> &#8712; {5, 20, 60}) is positive or negative (denoted <em>I</em>x/<em>R</em>y).
+      The primary model is a 1D CNN applied to image-scaled time-series features across all nine specifications.
+      A 2D CNN (the original Jiang, Kelly &amp; Xiu (2023) architecture) is trained on I5 only as a computational
+      reference point, and logistic regression serves as the linear baseline throughout.
+    </p>
+    <a class="paper-link" href="assets/cnn/paper.pdf" target="_blank">&#128196; Full paper (PDF)</a>
+  </div>
+
+  <!-- DATASET -->
+  <div class="section">
+    <h2>Dataset</h2>
+    <p>
+      Universe: all China A-shares with at least 180 days of listing history, sourced from CSMAR.
+      The modelling dataset comprises <strong>~9.6 million stock-date observations</strong> — a chart image
+      and 1D feature array is constructed for every stock on every trading day, and the CNN generates a
+      P(up) signal for each. Portfolio evaluation uses only out-of-sample predictions (2013–2024) on
+      rebalancing dates, yielding ~1.2 million stock-week observations for the R5 (weekly) strategy:
+      the reduction from 9.6 million reflects both the 5-day rebalancing interval and the exclusion of all
+      training-period data from portfolio construction. Stocks hitting the upper daily price limit
+      (LimitStatus&nbsp;=&nbsp;1) on the prediction date are excluded from portfolio entry,
+      consistent with A-share market microstructure.
+    </p>
+    <div class="dataset-callout">
+      <div class="ds-item">
+        <div class="ds-val">9.6M</div>
+        <div class="ds-lbl">stock-date observations, full sample 2005–2024</div>
+      </div>
+      <div class="ds-item">
+        <div class="ds-val">~1.2M</div>
+        <div class="ds-lbl">stock-week observations, out-of-sample 2013–2024 (R5)</div>
+      </div>
+      <div class="ds-item">
+        <div class="ds-val">4 rolling</div>
+        <div class="ds-lbl">GPU-trained windows, expanding from 2005</div>
+      </div>
+      <div class="ds-item">
+        <div class="ds-val">2013–2024</div>
+        <div class="ds-lbl">out-of-sample test period (portfolio evaluation)</div>
+      </div>
+    </div>
+    <p>
+      Rolling training windows expand from 2005 to cover each subsequent test block:
+      2005–2012 &#8594; test 2013–2015 &nbsp;|&nbsp; 2005–2015 &#8594; test 2016–2018 &nbsp;|&nbsp;
+      2005–2018 &#8594; test 2019–2021 &nbsp;|&nbsp; 2005–2021 &#8594; test 2022–2024.
+      All models are retrained on GPU for each window with a 70/30 internal train/validation split.
+    </p>
+  </div>
+
+  <!-- IMAGE PIPELINE -->
+  <div class="section">
+    <h2>Image Construction Pipeline</h2>
+    <p>
+      Chart images are constructed following Jiang, Kelly &amp; Xiu (2023) Section I exactly, ensuring direct
+      comparability with the U.S. results. The critical design choice is image-scale normalisation: all prices
+      within a window are rescaled so that max(high)&nbsp;=&nbsp;1 and min(low)&nbsp;=&nbsp;0, making the CNN
+      invariant to price level and sensitive only to pattern shape.
+    </p>
+    <div class="pipeline">
+      <div class="pipe-step">
+        <span class="pipe-num">01</span>
+        <div class="pipe-content">
+          <strong>OHLC bar rendering</strong>
+          <span>Each trading day occupies 3 pixel columns: open tick (left), high-low vertical bar (centre), close tick (right). Volume bars occupy the bottom 20% of image height.</span>
+        </div>
+      </div>
+      <div class="pipe-step">
+        <span class="pipe-num">02</span>
+        <div class="pipe-content">
+          <strong>Moving average overlay</strong>
+          <span>A moving average of length equal to the image window (e.g., 20-day MA for I20) is drawn on the chart, providing a trend reference consistent across all images.</span>
+        </div>
+      </div>
+      <div class="pipe-step">
+        <span class="pipe-num">03</span>
+        <div class="pipe-content">
+          <strong>Image-scale normalisation</strong>
+          <span>All prices normalised within each window: max(high)&nbsp;=&nbsp;1, min(low)&nbsp;=&nbsp;0. This step is central to CNN performance — it makes the model focus on price pattern shape rather than level. Pixel dimensions: I5 &#8594; 32&#215;15, I20 &#8594; 64&#215;60, I60 &#8594; 96&#215;180.</span>
+        </div>
+      </div>
+      <div class="pipe-step">
+        <span class="pipe-num">04</span>
+        <div class="pipe-content">
+          <strong>1D feature extraction</strong>
+          <span>The same six image-scaled series (open, high, low, close, MA, volume) are stored as float32 arrays for the 1D CNN and logistic regression, enabling direct comparison with and without 2D spatial structure.</span>
+        </div>
+      </div>
+      <div class="pipe-step">
+        <span class="pipe-num">05</span>
+        <div class="pipe-content">
+          <strong>Label construction</strong>
+          <span>Binary label: 1 if the forward <em>R</em>-day return (adj_close[<em>T</em>+<em>R</em>] / adj_close[<em>T</em>] &#8722; 1) is positive, 0 otherwise. Computed at prediction date <em>T</em> with no look-ahead bias.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ARCHITECTURE -->
+  <div class="section">
+    <h2>Model Architecture</h2>
+
+    <p><strong>1D CNN (primary model)</strong><br>
+    Input: the six image-scaled time-series (open, high, low, close, MA, volume) stored as float32 arrays.
+    1D convolutional filters slide along the time dimension only, capturing sequential price patterns
+    without assuming 2D spatial structure. Trained on GPU across all nine <em>I</em>x/<em>R</em>y specifications.
+    Fully connected output layer with 50% dropout and softmax activation producing P(up).
+    Early stopping with patience&nbsp;=&nbsp;3 epochs.</p>
+
+    <p><strong>2D CNN (computational reference, I5 only)</strong><br>
+    The original Jiang, Kelly &amp; Xiu (2023) architecture: black-and-white OHLC chart images fed into 2&ndash;4
+    stacked convolutional blocks (5&#215;3 kernel &#8594; Leaky ReLU &#8594; 2&#215;1 max-pool), doubling filters per layer
+    (64 &#8594; 128 &#8594; 256 &#8594; 512). Due to the substantially higher computational cost of processing full image
+    inputs at scale, the 2D CNN is trained and evaluated on the I5 specification only, serving as a reference
+    point against the 1D CNN on the same window.</p>
+
+    <p><strong>Logistic Regression (linear baseline)</strong><br>
+    L2 regularisation (C&nbsp;=&nbsp;1.0), saga solver, balanced class labels.
+    Applied to the same image-scaled 1D feature vectors as the 1D CNN. Quantifies how much of the predictive
+    gain comes from non-linearity versus the image-scale normalisation scheme alone.</p>
+
+    <p>
+      Portfolio construction: stocks are ranked by P(up) each rebalancing date, sorted into deciles D1 (lowest)
+      through D10 (highest), and held equal-weighted. The long-short portfolio is long D10 and short D1.
+      Statistical inference uses Newey-West <em>t</em>-statistics with 4 lags to correct for serial correlation.
+      Transaction costs follow Frazzini, Israel &amp; Moskowitz (2018): 10 bps one-way, flat across all stocks.
+      Annualised cost drag: ~10.1% for R5, ~2.5% for R20, ~0.8% for R60.
+    </p>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="section">
+    <h2>Results</h2>
+
+    <div class="tbl-caption">Table 1 &mdash; R5 weekly rebalancing: decile returns and long-short performance (annualised, <em>N</em>&nbsp;=&nbsp;583). 2D CNN trained on I5 only due to computational constraints.</div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="text-align:left">Strategy</th>
+            <th>D1</th><th>D5</th><th>D10</th>
+            <th>L/S Gross</th><th>L/S Net</th>
+            <th>SR Gross</th><th>SR Net</th>
+            <th><em>t</em>-stat</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>1D CNN I5</td><td>&minus;19.7%</td><td>+12.7%</td><td>+27.6%</td><td class="best">51.1%</td><td>31.0%</td><td class="best">5.41</td><td>3.28</td><td>[14.87]</td></tr>
+          <tr><td>1D CNN I20</td><td>&minus;17.9%</td><td>+11.9%</td><td>+30.6%</td><td>52.0%</td><td>31.8%</td><td>5.28</td><td>3.23</td><td>[16.19]</td></tr>
+          <tr><td>1D CNN I60</td><td>&minus;16.7%</td><td>+13.7%</td><td>+26.8%</td><td>47.4%</td><td>27.2%</td><td>4.69</td><td>2.69</td><td>[14.73]</td></tr>
+          <tr><td>2D CNN I5</td><td>&minus;23.5%</td><td>+15.5%</td><td>+24.9%</td><td>52.3%</td><td>32.1%</td><td>4.85</td><td>2.98</td><td>[14.90]</td></tr>
+          <tr class="sep"><td>Logistic I5</td><td>&minus;15.4%</td><td>+15.5%</td><td>+19.0%</td><td>38.4%</td><td>18.2%</td><td>2.97</td><td>1.41</td><td>[9.90]</td></tr>
+          <tr><td>Logistic I20</td><td>&minus;11.9%</td><td>+14.9%</td><td>+19.7%</td><td>33.8%</td><td>13.6%</td><td>2.76</td><td>1.11</td><td>[9.06]</td></tr>
+          <tr><td>Logistic I60</td><td>&minus;9.4%</td><td>+15.0%</td><td>+18.0%</td><td>29.2%</td><td>9.1%</td><td>2.51</td><td>0.78</td><td>[8.01]</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="tbl-caption">Table 2 &mdash; R20 monthly rebalancing: long-short performance (annualised, <em>N</em>&nbsp;=&nbsp;146)</div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="text-align:left">Strategy</th>
+            <th>D1</th><th>D10</th>
+            <th>L/S Gross</th><th>L/S Net</th>
+            <th>SR Gross</th><th>SR Net</th>
+            <th><em>t</em>-stat</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>1D CNN I5</td><td>&minus;0.5%</td><td>+21.7%</td><td class="best">23.7%</td><td>18.6%</td><td class="best">2.57</td><td>2.02</td><td>[6.87]</td></tr>
+          <tr><td>2D CNN I5</td><td>&minus;0.5%</td><td>+20.1%</td><td>22.4%</td><td>17.3%</td><td>2.38</td><td>1.85</td><td>[6.60]</td></tr>
+          <tr><td>1D CNN I20</td><td>+1.3%</td><td>+21.2%</td><td>21.7%</td><td>16.6%</td><td>2.11</td><td>1.62</td><td>[6.36]</td></tr>
+          <tr><td>1D CNN I60</td><td>+2.8%</td><td>+19.8%</td><td>18.1%</td><td>13.1%</td><td>2.01</td><td>1.45</td><td>[6.71]</td></tr>
+          <tr class="sep"><td>Logistic I60</td><td>+3.0%</td><td>+18.1%</td><td>14.7%</td><td>9.7%</td><td>1.12</td><td>0.74</td><td>[4.47]</td></tr>
+          <tr><td>Logistic I5</td><td>+7.2%</td><td>+13.1%</td><td>7.3%</td><td>2.2%</td><td>0.59</td><td>0.18</td><td>[2.06]</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="tbl-caption">Table 3 &mdash; R60 quarterly rebalancing: long-short performance (annualised, <em>N</em>&nbsp;=&nbsp;49)</div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="text-align:left">Strategy</th>
+            <th>D1</th><th>D10</th>
+            <th>L/S Gross</th><th>L/S Net</th>
+            <th>SR Gross</th><th>SR Net</th>
+            <th><em>t</em>-stat</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>1D CNN I5</td><td>+8.3%</td><td>+20.3%</td><td class="best">11.4%</td><td>9.7%</td><td class="best">1.42</td><td>1.21</td><td>[4.47]</td></tr>
+          <tr><td>1D CNN I20</td><td>+7.5%</td><td>+17.8%</td><td>11.0%</td><td>9.3%</td><td>1.30</td><td>1.10</td><td>[5.23]</td></tr>
+          <tr><td>2D CNN I5</td><td>+8.7%</td><td>+17.0%</td><td>8.8%</td><td>7.1%</td><td>1.05</td><td>0.85</td><td>[3.86]</td></tr>
+          <tr><td>1D CNN I60</td><td>+9.4%</td><td>+17.8%</td><td>8.7%</td><td>7.0%</td><td>0.93</td><td>0.75</td><td>[5.13]</td></tr>
+          <tr class="sep"><td>Logistic I60</td><td>+5.8%</td><td>+17.1%</td><td>11.5%</td><td>9.8%</td><td>0.91</td><td>0.77</td><td>[3.48]</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="fig-grid cols-1" style="margin-top:32px">
+      <div class="fig-item">
+        <img src="assets/cnn/Figure1_Decile_Return.png" alt="Decile returns" />
+        <div class="fig-caption">Figure 1 &mdash; Annualised decile returns at R5 (weekly rebalancing). A strong monotone spread is observed from D1 to D10 across all CNN specifications.</div>
+      </div>
+      <div class="fig-item">
+        <img src="assets/cnn/Figure2_CumReturn_R5.png" alt="Cumulative returns R5" />
+        <div class="fig-caption">Figure 2 &mdash; Cumulative long-short returns at R5 (weekly rebalancing): 1D CNN (all windows) versus 2D CNN I5 (computational reference) versus logistic regression, out-of-sample 2013–2024.</div>
+      </div>
+      <div class="fig-item">
+        <img src="assets/cnn/Figure3_CumReturn_R20.png" alt="Cumulative returns R20" />
+        <div class="fig-caption">Figure 3 &mdash; Cumulative long-short returns at R20 (monthly rebalancing). The CNN advantage over logistic regression narrows at lower rebalancing frequency.</div>
+      </div>
+      <div class="fig-item">
+        <img src="assets/cnn/Figure4_CumReturn_R60.png" alt="Cumulative returns R60" />
+        <div class="fig-caption">Figure 4 &mdash; Cumulative long-short returns at R60 (quarterly rebalancing). Transaction cost drag is negligible (~0.8% annualised); logistic regression becomes competitive at this horizon.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KEY FINDINGS -->
+  <div class="section">
+    <h2>Key Findings</h2>
+    <div class="insights">
+      <ul>
+        <li>
+          <strong>Image-based return prediction is strongly profitable in Chinese A-shares.</strong>
+          Gross long-short Sharpe ratios of 5.4 (weekly) and 2.6 (monthly) substantially exceed any plausible
+          benchmark, confirming that chart-pattern predictability extends to A-shares consistent with
+          Jiang, Kelly &amp; Xiu (2023)'s U.S. findings.
+        </li>
+        <li>
+          <strong>1D CNN matches or outperforms the 2D CNN on the comparable I5 specification.</strong>
+          Consistent with Jiang, Kelly &amp; Xiu (2023) Table IX, the key driver of performance is image-scale
+          normalisation, not 2D spatial convolution. Once prices are image-scaled, 1D convolution along the time
+          dimension is sufficient. This also justifies using the 1D CNN as the primary architecture, which is
+          far more computationally tractable across all nine <em>I</em>x/<em>R</em>y specifications.
+        </li>
+        <li>
+          <strong>CNNs substantially outperform logistic regression at short horizons.</strong>
+          Long-short Sharpe of 5.4 versus 3.0 at R5. The gap narrows significantly at R60, consistent with
+          longer horizons being more accessible to linear models — non-linearity matters most at high frequencies.
+        </li>
+        <li>
+          <strong>Transaction costs matter most at weekly frequency.</strong>
+          The R5 net Sharpe falls from 5.4 to 3.3 (~10% annualised cost drag). At R20 and R60,
+          the impact is modest, making lower-frequency strategies more practically viable for institutional investors.
+        </li>
+      </ul>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
