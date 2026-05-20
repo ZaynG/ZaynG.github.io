@@ -1,0 +1,204 @@
+Can Machines Learn to Trade Momentum?
+Evidence from Chinese A-Shares
+================================================================================
+
+
+1. DATA
+-------
+We use five datasets from the China Stock Market & Accounting Research (CSMAR)
+database covering all Chinese A-shares from January 2001 to December 2025.
+Daily data includes stock returns (Dretwd), adjusted closing prices (Adjprcwd),
+circulating market capitalization (Dsmvosd), and daily turnover rates (ToverOs).
+Monthly data includes CSMAR-computed returns (Mretwd) and average daily turnover
+(ToverOsMAvg). Corporate listing dates are used to apply a 180-day post-IPO
+exclusion filter. B-shares (2xx), BSE stocks (8xx), and SSE B-shares (9xx) are
+excluded from the universe. After filtering, the final sample contains 727,997
+stock-month observations across 5,432 unique stocks.
+
+
+2. FEATURES
+-----------
+We construct 74 cross-sectional features from price and volume data only. All
+features are computed from data available as of the end of month t-1 and
+cross-sectionally z-scored within each month to remove market-wide effects.
+Returns and turnover are winsorized at the 1st and 99th percentiles.
+
+                        Table 1: Feature Summary
+  ┌──────────────────────┬────────────────────────────────┬───────┬──────────┐
+  │ Feature Group        │ Features                       │ Count │ LGB Gain │
+  ├──────────────────────┼────────────────────────────────┼───────┼──────────┤
+  │ Monthly Returns      │ mret_cum2  ...  mret_cum13     │  12   │  18.1%   │
+  │ Daily Returns        │ dret_cum1  ...  dret_cum20     │  20   │  27.6%   │
+  │ Monthly Turnover     │ mto_cum2   ...  mto_cum13      │  12   │  12.9%   │
+  │ Daily Turnover       │ dto_cum1   ...  dto_cum20      │  20   │  25.1%   │
+  │ MA Ratios            │ ma_ratio_5/20/60/120/250       │   5   │   9.6%   │
+  │ MA Slopes            │ ma_slope_5/20/60/120/250       │   5   │   6.8%   │
+  ├──────────────────────┼────────────────────────────────┼───────┼──────────┤
+  │ Total                │                                │  74   │ 100.0%   │
+  └──────────────────────┴────────────────────────────────┴───────┴──────────┘
+  Notes: MA ratio = Adjprcwd / MA(w) - 1. MA slope = MA(w,t) / MA(w,t-20) - 1,
+  for windows w in {5, 20, 60, 120, 250} trading days. LGB Gain = LightGBM
+  feature importance (gain) from the model trained on 2002-2015.
+
+
+3. LABEL AND DATA SPLIT
+-----------------------
+The prediction target is a binary label: 1 if a stock's forward one-month return
+(month t+1) exceeds the cross-sectional median that month, 0 otherwise. The
+median is computed separately within each calendar month, ensuring no look-ahead
+bias. The resulting label distribution is approximately 50/50. The data is split
+chronologically into three non-overlapping periods:
+
+  Train  :  2002-01 to 2015-12   (260,825 obs, 14 years)
+  Val    :  2016-01 to 2019-12   (140,929 obs,  4 years)
+  Test   :  2020-01 to 2025-12   (326,243 obs,  6 years)
+
+The training period covers multiple complete market cycles including the 2008
+financial crisis and the 2015 A-share bubble. The validation set is used solely
+for hyperparameter selection and early stopping.
+
+
+4. MODELS
+---------
+We compare seven models across two categories. All models use identical 74
+features and the same train/validation/test split. All reported performance
+metrics are strictly out-of-sample (test period only). Hyperparameters for all
+models are set to standard values and fixed a priori. Tree-based models use
+early stopping on the validation set solely to determine the optimal number of
+boosting rounds; all architectural hyperparameters are fixed.
+
+  Linear models:
+    1. Basic Momentum  — rule-based 12-1 momentum signal via sigmoid, no training
+    2. L1 Logistic     — L1-penalized logistic regression (C=0.1), StandardScaler
+                         59 of 74 features retained (sparsity-inducing)
+    3. L2 Logistic     — L2-penalized logistic regression (C=1.0), StandardScaler
+    4. LDA             — Linear discriminant analysis, StandardScaler
+
+  Tree ensemble models:
+    5. Random Forest   — 200 trees, max_depth=8, min_samples_leaf=50, sqrt features
+    6. XGBoost         — max_depth=6, lr=0.05, subsample=0.8, best iter=63
+    7. LightGBM        — 63 leaves, lr=0.05, feature_fraction=0.8, best iter=33
+
+                    Table 2: Validation Accuracy by Model
+  ┌──────────────────────┬───────────────┬──────────────────┐
+  │ Model                │ Category      │ Val. Accuracy    │
+  ├──────────────────────┼───────────────┼──────────────────┤
+  │ Basic Momentum       │ Rule-based    │     50.31%       │
+  │ L1 Logistic          │ Linear        │     51.22%       │
+  │ L2 Logistic          │ Linear        │     51.32%       │
+  │ LDA                  │ Linear        │     51.36%       │
+  ├──────────────────────┼───────────────┼──────────────────┤
+  │ Random Forest        │ Tree Ensemble │     52.34%       │
+  │ XGBoost              │ Tree Ensemble │     51.97%       │
+  │ LightGBM             │ Tree Ensemble │     52.10%       │
+  └──────────────────────┴───────────────┴──────────────────┘
+  Notes: Validation accuracy is the fraction of correct above/below-median
+  predictions on the 2016-2019 validation set. L1 Logistic uses C=0.1
+  (strong regularization, sparsity-inducing); L2 Logistic uses C=1.0
+  (moderate regularization, sklearn default).
+
+
+5. PORTFOLIO CONSTRUCTION
+-------------------------
+Each month, all stocks are ranked by predicted probability and assigned to
+quintiles Q1 (lowest) through Q5 (highest). Equal-weighted portfolios are formed
+within each quintile and held for one month. The primary evaluation metrics are
+the Q5 long-only portfolio and the Q5-Q1 long-short spread. The long-short spread
+return is computed as the difference between the separately annualised Q5 and Q1
+returns, consistent with the Fama-French convention. Two benchmarks are reported:
+the equal-weighted (EW) market index (cross-sectional mean of monthly returns)
+and the value-weighted (VW) market index using beginning-of-month circulating
+market capitalization as weights.
+
+
+6. RESULTS
+----------
+Table 3 reports annualised quintile portfolio returns for all eight models over
+the out-of-sample test period (2020-2025). Table 4 summarises Q5 long-only and
+Q5-Q1 long-short performance including Sharpe ratios and maximum drawdowns.
+
+         Table 3: Annualised Quintile Returns — Test Period 2020-2025
+  ┌──────────────────┬────────┬────────┬────────┬────────┬────────┬────────┬──────────┐
+  │ Model            │   Q1   │   Q2   │   Q3   │   Q4   │   Q5   │  Q5-Q1 │ SR(Q5-Q1)│
+  ├──────────────────┼────────┼────────┼────────┼────────┼────────┼────────┼──────────┤
+  │ EW Market        │+14.71% │   —    │   —    │   —    │   —    │   —    │   0.66   │
+  │ VW Market        │+16.90% │   —    │   —    │   —    │   —    │   —    │   0.99   │
+  ├──────────────────┼────────┼────────┼────────┼────────┼────────┼────────┼──────────┤
+  │ Basic Momentum   │+13.25% │+16.36% │+16.44% │+15.80% │+11.76% │ -1.49% │  -0.10   │
+  │ L1 Logistic      │ +2.67% │+12.74% │+15.62% │+19.39% │+24.19% │+21.52% │   1.75   │
+  │ L2 Logistic      │ +3.04% │+12.67% │+15.70% │+19.38% │+23.75% │+20.71% │   1.69   │
+  │ LDA              │ +3.01% │+12.59% │+16.04% │+19.44% │+23.45% │+20.44% │   1.67   │
+  ├──────────────────┼────────┼────────┼────────┼────────┼────────┼────────┼──────────┤
+  │ XGBoost          │ +2.38% │+10.92% │+15.70% │+20.26% │+25.56% │+23.18% │   2.04   │
+  │ LightGBM         │ +2.61% │ +9.81% │+16.71% │+20.59% │+25.11% │+22.50% │   1.85   │
+  └──────────────────┴────────┴────────┴────────┴────────┴────────┴────────┴──────────┘
+  Notes: Q1 = lowest predicted quintile; Q5 = highest predicted quintile.
+  Q5-Q1 = difference of separately annualised Q5 and Q1 returns (Fama-French
+  convention). SR(Q5-Q1) = annualised Sharpe ratio of the monthly Q5-Q1 spread
+  series. All quintile returns are annualised from monthly equal-weighted
+  portfolios.
+
+      Table 4: Q5 Long-Only and Q5-Q1 Long-Short — Test Period 2020-2025
+  ┌──────────────────┬──────┬─────────┬───────┬──────────┬─────────┬───────┬──────────┐
+  │ Model            │ Cat  │ Q5 Ret  │ Q5 SR │  Q5 DD   │  LS Ret │ LS SR │  LS DD   │
+  ├──────────────────┼──────┼─────────┼───────┼──────────┼─────────┼───────┼──────────┤
+  │ EW Market        │  —   │+14.71%  │  0.66 │ -26.41%  │    —    │   —   │    —     │
+  │ VW Market        │  —   │+16.90%  │  0.99 │ -13.63%  │    —    │   —   │    —     │
+  ├──────────────────┼──────┼─────────┼───────┼──────────┼─────────┼───────┼──────────┤
+  │ Basic Momentum   │ Rule │+11.76%  │  0.49 │ -37.32%  │  -1.49% │ -0.10 │ -34.87%  │
+  │ L1 Logistic      │  Lin │+24.19%  │  1.08 │ -21.40%  │ +21.52% │  1.75 │  -8.15%  │
+  │ L2 Logistic      │  Lin │+23.75%  │  1.06 │ -21.28%  │ +20.71% │  1.69 │  -8.17%  │
+  │ LDA              │  Lin │+23.45%  │  1.04 │ -21.43%  │ +20.44% │  1.67 │  -8.29%  │
+  ├──────────────────┼──────┼─────────┼───────┼──────────┼─────────┼───────┼──────────┤
+  │ Random Forest    │ Tree │+25.08%  │  1.17 │ -16.62%  │ +23.19% │  1.76 │  -7.22%  │
+  │ XGBoost          │ Tree │+25.56%  │  1.15 │ -18.50%  │ +23.18% │  2.04 │  -5.10%  │
+  │ LightGBM         │ Tree │+25.11%  │  1.14 │ -17.90%  │ +22.50% │  1.85 │  -5.48%  │
+  └──────────────────┴──────┴─────────┴───────┴──────────┴─────────┴───────┴──────────┘
+  Notes: Q5 Ret = annualised Q5 long-only return; Q5 SR = Q5 Sharpe ratio;
+  Q5 DD = Q5 maximum drawdown. LS Ret = difference of separately annualised Q5
+  and Q1 returns; LS SR = annualised Sharpe ratio of monthly spread series;
+  LS DD = long-short maximum drawdown.
+
+
+7. CONCLUSION
+-------------
+We find that tree ensemble models consistently outperform both market benchmarks
+and linear models in predicting cross-sectional stock returns in Chinese A-shares.
+Three findings stand out.
+
+First, basic momentum fails in A-shares. The Q5-Q1 spread of the rule-based
+12-1 momentum strategy is negative (-1.49%), consistent with the well-documented
+momentum reversal in Chinese markets. The Q5 long-only return of +11.76% falls
+below both the EW (+14.71%) and VW (+16.90%) market benchmarks.
+
+Second, tree ensemble models recover strong predictive signal that momentum rules
+miss. All three tree models achieve long-short Sharpe ratios above 1.75, compared
+to 1.67-1.75 for linear models. XGBoost achieves the highest long-short Sharpe
+ratio (2.04) with a maximum drawdown of only -5.10% and a long-short spread
+return of +23.18%. Over the full 2002-2025 timeline, the XGBoost Q5 portfolio
+delivers +41.4% annualised return with SR=1.14, against +17.1% (SR=0.53) for
+the EW market.
+
+Third, linear models are surprisingly competitive. L1 Logistic achieves a
+long-short Sharpe ratio of 1.75, nearly matching Random Forest (1.76), suggesting
+that much of the predictive signal in A-shares is approximately linear after
+proper feature engineering and cross-sectional normalization. The L1 penalty
+retains 59 of 74 features, confirming that sparse linear models can capture the
+momentum signal effectively. Tree ensemble models primarily add value at the
+distributional extremes — they exhibit materially lower maximum drawdowns on the
+long-short spread (-5.1% to -7.2%) relative to linear models (-8.2% to -8.3%).
+
+Feature importance analysis confirms that short-term price-volume dynamics drive
+predictability. Daily returns (27.6%) and daily turnover (25.1%) together account
+for over half of total LightGBM gain, with monthly returns (18.1%), monthly
+turnover (12.9%), MA ratios (9.6%), and MA slopes (6.8%) providing complementary
+information. The most informative individual features are the 20-day cumulative
+daily turnover (dto_cum20, 7.6%) and the single-day return from approximately
+one month ago (dret_cum1, 7.3%).
+
+Overall, the evidence supports the view that machines can learn to trade momentum
+in Chinese A-shares — not by amplifying classical momentum signals, but by
+extracting complementary information from short-term price dynamics, trading
+activity, and trend features that rule-based strategies systematically miss.
+
+================================================================================

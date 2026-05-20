@@ -45,7 +45,7 @@
       The prediction task is binary classification. Each month, models rank all eligible stocks by their predicted
       probability of beating the cross-sectional median return in the following month. Stocks are sorted into quintile
       portfolios Q1 (lowest signal) through Q5 (highest signal), held for one month. The Q5–Q1 long-short spread
-      is evaluated out-of-sample over the 2020–2025 test period. Eight models are compared, from the naive
+      is evaluated out-of-sample over the 2020–2025 test period. Seven models are compared, from the naive
       12-1 momentum rule to gradient-boosted trees.
     </p>
     <a class="paper-link" href="assets/momentum/paper.pdf" target="_blank">&#128196; Full paper (PDF)</a>
@@ -161,11 +161,12 @@
   <div class="section">
     <h2>Models</h2>
     <p>
-      Eight models are compared, all trained on the same 74 features with identical data splits.
+      Seven models are compared, all trained on the same 74 features with identical data splits.
       The basic momentum model serves as the rule-based baseline — it requires no training, relying solely on
-      the 12-month cumulative return signal. The remaining seven are statistical and machine learning models,
-      ranging from penalised linear classifiers to gradient-boosted trees.
+      the 12-month cumulative return signal. The remaining six span linear classifiers and tree ensemble models.
       All reported metrics are strictly out-of-sample (test period 2020–2025).
+      Hyperparameters for all models are set to standard values and fixed a priori; tree-based models use
+      early stopping on the validation set solely to determine the optimal number of boosting rounds.
     </p>
     <div class="pipeline">
       <div class="pipe-step">
@@ -178,8 +179,8 @@
       <div class="pipe-step">
         <span class="pipe-num">—</span>
         <div class="pipe-content">
-          <strong>Logistic Regression, LASSO, Ridge, LDA</strong>
-          <span>Linear classifiers with L1/L2 regularisation, trained with StandardScaler. Serve as interpretable benchmarks to assess whether the predictive signal is approximately linear in the feature space.</span>
+          <strong>L1 Logistic, L2 Logistic, LDA</strong>
+          <span>Linear classifiers trained with StandardScaler. L1 Logistic uses C=0.1 (strong regularisation, retains 59 of 74 features); L2 Logistic uses C=1.0 (sklearn default). Serve as interpretable benchmarks to assess whether the predictive signal is approximately linear in the feature space.</span>
         </div>
       </div>
       <div class="pipe-step">
@@ -227,14 +228,13 @@
         <tbody>
           <tr class="bench"><td>EW Market</td><td>+14.71%</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>0.66</td></tr>
           <tr class="bench"><td>VW Market</td><td>+16.90%</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>0.99</td></tr>
-          <tr class="sep"><td>Basic Momentum</td><td>+13.25%</td><td>+16.36%</td><td>+16.44%</td><td>+15.80%</td><td>+11.76%</td><td>&minus;1.33%</td><td>&minus;0.10</td></tr>
-          <tr><td>Logistic Regression</td><td>+3.04%</td><td>+12.67%</td><td>+15.70%</td><td>+19.38%</td><td>+23.75%</td><td>+20.16%</td><td>1.69</td></tr>
-          <tr><td>LASSO</td><td>+2.67%</td><td>+12.74%</td><td>+15.62%</td><td>+19.39%</td><td>+24.19%</td><td>+21.01%</td><td>1.75</td></tr>
-          <tr><td>Ridge</td><td>+3.04%</td><td>+12.67%</td><td>+15.70%</td><td>+19.38%</td><td>+23.75%</td><td>+20.16%</td><td>1.69</td></tr>
-          <tr><td>LDA</td><td>+3.01%</td><td>+12.59%</td><td>+16.04%</td><td>+19.44%</td><td>+23.45%</td><td>+19.90%</td><td>1.67</td></tr>
-          <tr><td>Random Forest</td><td>+1.89%</td><td>+10.93%</td><td>+16.31%</td><td>+20.64%</td><td>+25.08%</td><td>+22.79%</td><td>1.76</td></tr>
-          <tr><td>XGBoost</td><td>+2.38%</td><td>+10.92%</td><td>+15.70%</td><td>+20.26%</td><td class="best">+25.56%</td><td>+22.69%</td><td class="best">2.04</td></tr>
-          <tr><td>LightGBM</td><td>+2.61%</td><td>+9.81%</td><td>+16.71%</td><td>+20.59%</td><td>+25.11%</td><td>+21.98%</td><td>1.85</td></tr>
+          <tr class="sep"><td>Basic Momentum</td><td>+13.25%</td><td>+16.36%</td><td>+16.44%</td><td>+15.80%</td><td>+11.76%</td><td>&minus;1.49%</td><td>&minus;0.10</td></tr>
+          <tr><td>L1 Logistic</td><td>+2.67%</td><td>+12.74%</td><td>+15.62%</td><td>+19.39%</td><td>+24.19%</td><td>+21.52%</td><td>1.75</td></tr>
+          <tr><td>L2 Logistic</td><td>+3.04%</td><td>+12.67%</td><td>+15.70%</td><td>+19.38%</td><td>+23.75%</td><td>+20.71%</td><td>1.69</td></tr>
+          <tr><td>LDA</td><td>+3.01%</td><td>+12.59%</td><td>+16.04%</td><td>+19.44%</td><td>+23.45%</td><td>+20.44%</td><td>1.67</td></tr>
+          <tr class="sep"><td>Random Forest</td><td>+1.89%</td><td>+10.93%</td><td>+16.31%</td><td>+20.64%</td><td>+25.08%</td><td>+23.19%</td><td>1.76</td></tr>
+          <tr><td>XGBoost</td><td>+2.38%</td><td>+10.92%</td><td>+15.70%</td><td>+20.26%</td><td class="best">+25.56%</td><td>+23.18%</td><td class="best">2.04</td></tr>
+          <tr><td>LightGBM</td><td>+2.61%</td><td>+9.81%</td><td>+16.71%</td><td>+20.59%</td><td>+25.11%</td><td>+22.50%</td><td>1.85</td></tr>
         </tbody>
       </table>
     </div>
@@ -252,14 +252,13 @@
         <tbody>
           <tr class="bench"><td>EW Market</td><td>+14.71%</td><td>0.66</td><td>&minus;26.41%</td><td>—</td><td>—</td><td>—</td></tr>
           <tr class="bench"><td>VW Market</td><td>+16.90%</td><td>0.99</td><td>&minus;13.63%</td><td>—</td><td>—</td><td>—</td></tr>
-          <tr class="sep"><td>Basic Momentum</td><td>+11.76%</td><td>0.49</td><td>&minus;37.32%</td><td>&minus;1.33%</td><td>&minus;0.10</td><td>&minus;34.87%</td></tr>
-          <tr><td>Logistic Regression</td><td>+23.75%</td><td>1.06</td><td>&minus;21.28%</td><td>+20.16%</td><td>1.69</td><td>&minus;8.17%</td></tr>
-          <tr><td>LASSO</td><td>+24.19%</td><td>1.08</td><td>&minus;21.40%</td><td>+21.01%</td><td>1.75</td><td>&minus;8.15%</td></tr>
-          <tr><td>Ridge</td><td>+23.75%</td><td>1.06</td><td>&minus;21.28%</td><td>+20.16%</td><td>1.69</td><td>&minus;8.17%</td></tr>
-          <tr><td>LDA</td><td>+23.45%</td><td>1.04</td><td>&minus;21.43%</td><td>+19.90%</td><td>1.67</td><td>&minus;8.29%</td></tr>
-          <tr><td>Random Forest</td><td>+25.08%</td><td>1.17</td><td>&minus;16.62%</td><td>+22.79%</td><td>1.76</td><td>&minus;7.22%</td></tr>
-          <tr><td>XGBoost</td><td class="best">+25.56%</td><td>1.15</td><td>&minus;18.50%</td><td>+22.69%</td><td class="best">2.04</td><td class="best">&minus;5.10%</td></tr>
-          <tr><td>LightGBM</td><td>+25.11%</td><td>1.14</td><td>&minus;17.90%</td><td>+21.98%</td><td>1.85</td><td>&minus;5.48%</td></tr>
+          <tr class="sep"><td>Basic Momentum</td><td>+11.76%</td><td>0.49</td><td>&minus;37.32%</td><td>&minus;1.49%</td><td>&minus;0.10</td><td>&minus;34.87%</td></tr>
+          <tr><td>L1 Logistic</td><td>+24.19%</td><td>1.08</td><td>&minus;21.40%</td><td>+21.52%</td><td>1.75</td><td>&minus;8.15%</td></tr>
+          <tr><td>L2 Logistic</td><td>+23.75%</td><td>1.06</td><td>&minus;21.28%</td><td>+20.71%</td><td>1.69</td><td>&minus;8.17%</td></tr>
+          <tr><td>LDA</td><td>+23.45%</td><td>1.04</td><td>&minus;21.43%</td><td>+20.44%</td><td>1.67</td><td>&minus;8.29%</td></tr>
+          <tr class="sep"><td>Random Forest</td><td>+25.08%</td><td>1.17</td><td>&minus;16.62%</td><td>+23.19%</td><td>1.76</td><td>&minus;7.22%</td></tr>
+          <tr><td>XGBoost</td><td class="best">+25.56%</td><td>1.15</td><td>&minus;18.50%</td><td>+23.18%</td><td class="best">2.04</td><td class="best">&minus;5.10%</td></tr>
+          <tr><td>LightGBM</td><td>+25.11%</td><td>1.14</td><td>&minus;17.90%</td><td>+22.50%</td><td>1.85</td><td>&minus;5.48%</td></tr>
         </tbody>
       </table>
     </div>
@@ -301,13 +300,13 @@
       <ul>
         <li>
           <strong>Momentum reversal confirmed in Chinese A-shares.</strong>
-          The rule-based 12-1 momentum signal produces a negative Q5&minus;Q1 spread (&minus;1.33%), with Q5 return (+11.76%)
+          The rule-based 12-1 momentum signal produces a negative Q5&minus;Q1 spread (&minus;1.49%), with Q5 return (+11.76%)
           below both the equal-weighted (+14.71%) and value-weighted (+16.90%) market benchmarks.
           This is consistent with the well-documented absence of conventional momentum in Chinese A-shares.
         </li>
         <li>
-          <strong>Machine learning recovers strong predictive signal.</strong>
-          All models from logistic regression to gradient-boosted trees produce a clear monotone quintile spread
+          <strong>Tree ensemble models recover strong predictive signal.</strong>
+          All models from linear classifiers to gradient-boosted trees produce a clear monotone quintile spread
           and positive long-short Sharpe ratios (1.67–2.04), in stark contrast to the momentum baseline (&minus;0.10).
           XGBoost delivers the best risk-adjusted result: long-short Sharpe 2.04, maximum drawdown &minus;5.10%.
           Over the full 2002–2025 backtest, the XGBoost Q5 portfolio returns +41.4% annualised (Sharpe 1.14)
@@ -315,9 +314,10 @@
         </li>
         <li>
           <strong>Linear models are surprisingly competitive.</strong>
-          LASSO achieves a long-short Sharpe of 1.75, nearly matching Random Forest (1.76). The predictive signal in
-          Chinese A-shares is largely linear after proper feature engineering and cross-sectional normalisation.
-          Non-linear models add value primarily at distributional extremes: tree-based models exhibit
+          L1 Logistic achieves a long-short Sharpe of 1.75, nearly matching Random Forest (1.76). The L1 penalty
+          retains 59 of 74 features, confirming that sparse linear models can capture the momentum signal effectively.
+          The predictive signal in Chinese A-shares is largely linear after proper feature engineering and cross-sectional normalisation.
+          Tree ensemble models add value primarily at distributional extremes: they exhibit
           materially lower maximum drawdowns (&minus;5.1% to &minus;7.2%) relative to linear models (&minus;8.2% to &minus;8.3%).
         </li>
         <li>
