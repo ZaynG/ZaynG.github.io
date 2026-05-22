@@ -30,21 +30,22 @@
   <div class="section">
     <h2>Problem Setup</h2>
     <p class="lead">
-      Traditional portfolio optimization — mean-variance, minimum variance, equal risk contribution (ERC) — relies on
-      inverting a covariance matrix. In high-dimensional equity universes (N &#8776; 500), the sample covariance matrix
-      is near-singular and highly unstable, producing extreme weight allocations and poor out-of-sample performance
-      even after shrinkage corrections.
+      Risk parity strategies allocate portfolio weights based on risk rather than expected return, sidestepping
+      the estimation instability of mean-variance optimization. The simplest approach — inverse volatility (IV)
+      weighting — requires only individual asset volatilities. More sophisticated variants, such as equal risk
+      contribution (ERC), equalise each asset&rsquo;s marginal contribution to total portfolio risk, but require
+      estimating a full covariance matrix.
     </p>
     <p>
-      Hierarchical Risk Parity (L&oacute;pez de Prado, 2016) takes a fundamentally different approach: instead of inverting
-      a covariance matrix, it uses hierarchical clustering to uncover the natural correlation structure among assets,
-      then allocates risk recursively across clusters. No matrix inversion is required.
+      Hierarchical Risk Parity (L&oacute;pez de Prado, 2016) takes a different approach: it uses hierarchical
+      clustering to uncover the natural correlation structure among assets, then allocates risk recursively across
+      clusters — without requiring matrix inversion.
     </p>
     <p>
-      This project replicates the HRP methodology on the S&amp;P 500 (1996–2024) and extends it to China&rsquo;s CSI 300
-      (2012–2025) — testing whether hierarchical risk allocation retains its advantages in a less mature,
-      higher-volatility emerging market. HRP is benchmarked against inverse volatility (IV) and
-      three ERC variants using sample covariance, Ledoit&ndash;Wolf shrinkage, and PCA-based estimation.
+      This project replicates HRP on the S&amp;P 500 (1996–2024) and extends it to China&rsquo;s CSI 300 (2012–2025),
+      testing whether clustering-based allocation outperforms the simpler risk parity alternatives — inverse
+      volatility and three ERC variants (sample covariance, Ledoit&ndash;Wolf shrinkage, and PCA-based estimation)
+      — across two structurally different equity markets.
     </p>
     <a class="paper-link" href="assets/hrp/paper.pdf" target="_blank">&#128196; Full paper (PDF)</a>
   </div>
