@@ -71,14 +71,14 @@
       </div>
     </div>
     <p>
-      <strong>S&amp;P 500:</strong> Monthly total returns from CRSP (survivorship-bias-free), SPY ETF as benchmark.
+      <strong>S&amp;P 500:</strong> Monthly total returns from CRSP (survivorship-bias-free), SPY ETF included as market reference.
       Constituency file used at each monthly rebalance date to ensure only eligible index members are included.
       Full sample spans 1991–2024 (252,164 stock-month observations); backtest begins 1996 after applying a
       minimum 60-month lookback filter (&#8805;36 valid observations required).
     </p>
     <p>
       <strong>CSI 300:</strong> Monthly returns from WIND database (2007–2025), CSI 300 constituency file.
-      Equal-weighted CSI 300 index used as benchmark. Missing data imputed with cross-sectional mean of each period.
+      Equal-weighted CSI 300 index included as market reference. Missing data imputed with cross-sectional mean of each period.
     </p>
   </div>
 
@@ -177,9 +177,9 @@
   <div class="section">
     <h2>Results &mdash; S&amp;P 500 (1996&ndash;2024)</h2>
     <p>
-      All five risk allocation strategies outperform the SPY benchmark on a risk-adjusted basis.
-      HRP delivers the most compelling risk profile: the highest Sharpe ratio (0.87) and shallowest
-      maximum drawdown (&minus;43.7%), despite a lower raw return than IV and ERC.
+      Among the five risk parity strategies, HRP delivers the most compelling risk profile: the highest
+      Sharpe ratio (0.87) and shallowest maximum drawdown (&minus;43.7%), despite a lower raw return than IV and ERC.
+      All five strategies also outperform SPY on a risk-adjusted basis.
       Inverse Volatility offers the highest return (12.5%) with minimal turnover (1.1%),
       making it a strong practical alternative.
     </p>
@@ -189,7 +189,7 @@
       principle itself drives the improvement, not the specific estimation technique.
     </p>
 
-    <div class="tbl-caption">Table 1 &mdash; Risk allocation strategies vs. SPY benchmark, January 1996&ndash;December 2024</div>
+    <div class="tbl-caption">Table 1 &mdash; Risk parity strategies, S&amp;P 500 (January 1996&ndash;December 2024); SPY shown as market reference</div>
     <div class="tbl-wrap">
       <table>
         <thead>
@@ -242,7 +242,7 @@
       and the 2018 trade war selloff.
     </p>
 
-    <div class="tbl-caption">Table 2 &mdash; Risk allocation strategies vs. equal-weighted CSI 300 benchmark, May 2012&ndash;October 2025</div>
+    <div class="tbl-caption">Table 2 &mdash; Risk parity strategies, CSI 300 (May 2012&ndash;October 2025); equal-weighted CSI 300 shown as market reference</div>
     <div class="tbl-wrap">
       <table>
         <thead>
@@ -284,7 +284,7 @@
         <li>
           <strong>HRP achieves the best risk-adjusted performance in both markets.</strong>
           Highest Sharpe and Sortino ratios across all strategies: 0.87/1.17 in the S&amp;P 500 and 0.53/0.82 in the CSI 300.
-          In China, HRP uniquely dominates in raw returns as well (10.4% vs. 7.8% benchmark),
+          In China, HRP uniquely dominates in raw returns as well (10.4% vs. 9.5% for Inverse Volatility and 7.8% equal-weighted index),
           which is unusual for a pure risk-based allocation strategy.
         </li>
         <li>
